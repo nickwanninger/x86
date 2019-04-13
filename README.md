@@ -1,3 +1,17 @@
+# x86
+## A quick and dirty x86 JIT library built for C++
+
+
+### API:
+Below is a very simple function which adds it's arguments together
+```c
+int add(int a, int b) {
+	return a + b;
+}
+```
+
+Using the API provided by x86, it can be created at runtime:
+```cpp
 #include <stdio.h>
 #include "x86.h"
 
@@ -15,3 +29,4 @@ int main() {
   assert(res == 3);
   printf("1 + 2 = %ld\n", res);
 }
+```
