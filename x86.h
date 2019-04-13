@@ -250,10 +250,20 @@ class code {
   // and calls for write append to it.
   uint8_t *buf;
 
+  bool finalized = false;
+
+  void *mapped_region = nullptr;
+
  public:
   inline code() {
     cap = 32;
     buf = new uint8_t[cap];
+  }
+
+  inline ~code() {
+    if (mapped_region != nullptr && finalized) {
+      munmap(mapped_region, size);
+    }
   }
 
   inline x86::code &operator<<(inst i) {
@@ -268,12 +278,14 @@ class code {
 
   template <typename T>
   inline uint64_t write_to(uint64_t i, T val) const {
+    if (finalized) throw std::logic_error("x86: unable to modify finalized code");
     *(T *)(void *)(buf + i) = val;
     return size;
   }
 
   template <typename T>
   inline uint64_t write(T val) {
+    if (finalized) throw std::logic_error("x86: unable to modify finalized code");
     if (size + sizeof(val) >= cap - 1) {
       uint8_t *new_code = new uint8_t[cap * 2];
       memcpy(new_code, buf, cap);
@@ -344,18 +356,24 @@ class code {
 
   template <typename R, typename... Args>
   std::function<R(Args...)> finalize(void) {
+    if (finalized) throw std::logic_error("x86: unable re-finalize code");
+
+    finalized = true;
     std::function<R(Args...)> f;
 
     auto ptr = (R(*)(Args...))mmap(NULL, get_size(), PROT_READ | PROT_EXEC | PROT_WRITE,
                           MAP_ANON | MAP_PRIVATE, -1, 0);
 
-
+    mapped_region = (void*)ptr;
     copy((char*)ptr);
     f = ptr;
     return f;
   }
 
   inline int dump(void) { return dump_bytes(buf, size); }
+
+  void prologue(void);
+  void epilogue(void);
 };
 
 };  // namespace x86

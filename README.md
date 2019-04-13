@@ -16,26 +16,27 @@ Using the API provided by x86, it can be created at runtime:
 #include "x86.h"
 
 int main() {
-	x86::code code;
-	// typical x86 prologue
-	code << x86::push(x86::ebp);
-	code << x86::mov(x86::ebp, x86::esp);
-
-	// add the two arguments together a += b
-	code << x86::add(x86::edi, x86::esi);
-	// move the result into eax (the return register)
-	code << x86::mov(x86::eax, x86::edi);
-
-	// typical x86 epilogue
-	code << x86::pop(x86::ebp);
-	code << x86::ret(); // return
-
-	// create a function that is of the form `long func(long, long);`
-	auto func = code.finalize<long, long, long>();
-
-	// call it!
-	long res = func(1, 2);
-	assert(res == 3);
-	printf("1 + 2 = %ld\n", res);
+  // create a code object
+  x86::code code;
+  // fill out the instructions
+  code.prologue(); // prologue of the function, setup stack frame
+  code << x86::add(x86::edi, x86::esi);
+  code << x86::mov(x86::eax, x86::edi);
+  code.epilogue(); // pop rbp and return
+  // print the x86 mnemonics (using capstone)
+  code.dump();
+  // finalize the function and call it!
+  auto func = code.finalize<long, long, long>();
+  long res = func(1, 2);
+  assert(res == 3);
+  printf("1 + 2 = %ld\n", res);
 }
 ```
+
+
+The x86::code object uses RAII for the executable pages of memory and when the
+object is deleted, the mapped region is also deleted. Therefore it might be
+smart to store the code object on the heap if you plan to 'lose track' of it :)
+
+Finalizing a code object will fail if it was already finalized. If this happens,
+the finalize function will throw a `std::logic_error` exception.

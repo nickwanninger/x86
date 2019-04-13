@@ -24,3 +24,15 @@ void x86::inst::encode(code &c) {
   }
 }
 
+
+void code::prologue() {
+  *this << push(ebp);
+  *this << mov(ebp, esp);
+}
+
+
+void code::epilogue() {
+  *this << x86::pop(x86::ebp);
+  *this << ret();
+}
+
